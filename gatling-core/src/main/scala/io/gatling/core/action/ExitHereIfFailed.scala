@@ -18,6 +18,7 @@ package io.gatling.core.action
 import scala.annotation.tailrec
 
 import akka.actor.ActorRef
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.result.message.{ GroupMessage, GroupStackEntry, KO }
 import io.gatling.core.result.writer.DataWriter
 import io.gatling.core.session.Session
@@ -41,7 +42,11 @@ class ExitHereIfFailed(val next: ActorRef) extends Chainable {
 
 		if (session.status == KO) {
 			failAllPendingGroups(session.groupStack)
+			Debugger.debugger ! DebugEvent(session.userId, "ExitHereIfFailed")
 			UserEnd.userEnd ! session
-		} else next ! session
+		} else {
+			Debugger.debugger ! DebugEvent(session.userId, "ExitHereIfFailed bypassed")
+			next ! session
+		}
 	}
 }
