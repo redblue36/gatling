@@ -15,12 +15,12 @@
  */
 package io.gatling.core.action
 
+import akka.actor.ActorRef
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.feeder.{ Feeder, Record }
 import io.gatling.core.result.terminator.Terminator
 import io.gatling.core.session.{ Expression, Session }
 import io.gatling.core.validation.{ Failure, FailureWrapper, Success, SuccessWrapper, Validation }
-
-import akka.actor.ActorRef
 
 class SingletonFeed[T](val feeder: Feeder[T]) extends BaseActor {
 
@@ -56,6 +56,7 @@ class SingletonFeed[T](val feeder: Feeder[T]) extends BaseActor {
 			case Failure(message) => logger.error(message); session
 		}
 
+		Debugger.debugger ! DebugEvent(session.userId, "Feed")
 		next ! newSession
 	}
 }

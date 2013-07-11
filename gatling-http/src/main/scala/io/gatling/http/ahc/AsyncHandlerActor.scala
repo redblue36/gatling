@@ -26,6 +26,7 @@ import akka.routing.RoundRobinRouter
 import io.gatling.core.action.{ BaseActor, system }
 import io.gatling.core.check.Checks
 import io.gatling.core.config.GatlingConfiguration.configuration
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.result.message.{ KO, OK, RequestMessage, Status }
 import io.gatling.core.result.writer.DataWriter
 import io.gatling.core.session.Session
@@ -40,7 +41,6 @@ import io.gatling.http.util.HttpStringBuilder
 
 object AsyncHandlerActor {
 	val redirectedRequestNamePattern = """(.+?) Redirect (\d+)""".r
-	val timeout = configuration.core.timeOut.simulation seconds
 
 	val asyncHandlerActor = system.actorOf(Props[AsyncHandlerActor].withRouter(RoundRobinRouter(nrOfInstances = 3 * Runtime.getRuntime.availableProcessors)))
 }
@@ -48,20 +48,28 @@ object AsyncHandlerActor {
 class AsyncHandlerActor extends BaseActor {
 
 	override def preStart {
-		context.setReceiveTimeout(AsyncHandlerActor.timeout)
+		context.setReceiveTimeout(configuration.core.timeOut.simulation seconds)
 	}
 
 	override def preRestart(reason: Throwable, message: Option[Any]) {
 		logger.error(s"AsyncHandlerActor crashed on message $message, forwarding user to the next action", reason)
 		message.foreach {
-			case OnCompleted(task, _) => task.next ! task.session.markAsFailed
-			case OnThrowable(task, _, _) => task.next ! task.session.markAsFailed
+			case OnCompleted(task, _) =>
+				Debugger.debugger ! DebugEvent(task.session.userId, s"AsyncHandlerActor.preRestart OnCompleted $reason")
+				task.next ! task.session.markAsFailed
+			case OnThrowable(task, _, _) =>
+				Debugger.debugger ! DebugEvent(task.session.userId, s"AsyncHandlerActor.preRestart OnThrowable $reason")
+				task.next ! task.session.markAsFailed
 		}
 	}
 
 	def receive = {
-		case OnCompleted(task, response) => processResponse(task, response)
-		case OnThrowable(task, response, errorMessage) => ko(task, task.session, response, errorMessage)
+		case OnCompleted(task, response) =>
+			Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandlerActor.receive OnCompleted")
+			processResponse(task, response)
+		case OnThrowable(task, response, errorMessage) =>
+			Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandlerActor.receive OnThrowable")
+			ko(task, task.session, response, errorMessage)
 	}
 
 	private def logRequest(
@@ -118,6 +126,7 @@ class AsyncHandlerActor extends BaseActor {
 	 */
 	private def executeNext(task: HttpTask, newSession: Session, response: Response) {
 		task.next ! newSession.increaseDrift(nowMillis - response.lastByteReceived)
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandlerActor.executeNext")
 	}
 
 	private def ok(task: HttpTask, session: Session, response: Response) {
@@ -162,6 +171,7 @@ class AsyncHandlerActor extends BaseActor {
 				case _ => task.requestName + " Redirect 1"
 			}
 
+			Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandlerActor.redirect to ${newRequest.getUrl}")
 			HttpClient.sendHttpRequest(task.copy(session = sessionWithUpdatedCookies, request = newRequest, requestName = newRequestName))
 		}
 

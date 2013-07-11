@@ -21,7 +21,7 @@ import com.ning.http.client.{ HttpResponseBodyPart, HttpResponseHeaders, HttpRes
 import com.ning.http.client.AsyncHandler.STATE.CONTINUE
 import com.typesafe.scalalogging.slf4j.Logging
 
-import io.gatling.http.response.ResponseBuilder
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 
 /**
  * This class is the AsyncHandler that AsyncHttpClient needs to process a request's response
@@ -50,25 +50,30 @@ class AsyncHandler(task: HttpTask) extends ProgressAsyncHandler[Unit] with Loggi
 	def onContentWriteProgress(amount: Long, current: Long, total: Long) = CONTINUE
 
 	def onStatusReceived(status: HttpResponseStatus) = {
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandler.onStatusReceived done=${done.get}")
 		if (!done.get) responseBuilder.accumulate(status)
 		CONTINUE
 	}
 
 	def onHeadersReceived(headers: HttpResponseHeaders) = {
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandler.onHeadersReceived done=${done.get}")
 		if (!done.get) responseBuilder.accumulate(headers)
 		CONTINUE
 	}
 
 	def onBodyPartReceived(bodyPart: HttpResponseBodyPart) = {
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandler.onBodyPartReceived done=${done.get}")
 		if (!done.get) responseBuilder.accumulate(bodyPart)
 		CONTINUE
 	}
 
 	def onCompleted {
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandler.onCompleted done=${done.get}")
 		if (!done.getAndSet(true)) AsyncHandlerActor.asyncHandlerActor ! OnCompleted(task, responseBuilder.build)
 	}
 
 	def onThrowable(throwable: Throwable) {
+		Debugger.debugger ! DebugEvent(task.session.userId, s"${task.requestName} AsyncHandler.onThrowable done=${done.get} $throwable")
 		if (!done.getAndSet(true)) {
 			val errorMessage = Option(throwable.getMessage).getOrElse(throwable.getClass.getName)
 			if (logger.underlying.isInfoEnabled)

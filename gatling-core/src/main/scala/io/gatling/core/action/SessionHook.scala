@@ -16,6 +16,7 @@
 package io.gatling.core.action
 
 import akka.actor.ActorRef
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.session.{ Expression, Session }
 
 /**
@@ -32,5 +33,8 @@ class SessionHook(sessionFunction: Expression[Session], val next: ActorRef) exte
 	 *
 	 * @param session the session of the virtual user
 	 */
-	def executeOrFail(session: Session) = sessionFunction(session).map(newSession => next ! newSession)
+	def executeOrFail(session: Session) = {
+		Debugger.debugger ! DebugEvent(session.userId, "SessionHook")
+		sessionFunction(session).map(newSession => next ! newSession)
+	}
 }

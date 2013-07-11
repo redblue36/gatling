@@ -16,6 +16,7 @@
 package io.gatling.core.action
 
 import akka.actor.Props
+import io.gatling.core.debug.{ DebugEnd, Debugger }
 import io.gatling.core.result.message.{ End, ScenarioMessage }
 import io.gatling.core.result.writer.DataWriter
 import io.gatling.core.session.Session
@@ -30,6 +31,7 @@ class UserEnd extends Action {
 
 	def execute(session: Session) {
 		logger.info(s"End user #${session.userId}")
+		Debugger.debugger ! DebugEnd(session.userId)
 		DataWriter.tell(ScenarioMessage(session.scenarioName, session.userId, End, session.startDate, nowMillis))
 	}
 }

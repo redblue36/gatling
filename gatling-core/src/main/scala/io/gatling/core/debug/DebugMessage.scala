@@ -13,18 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.gatling.core.action
+package io.gatling.core.debug
 
-import io.gatling.core.debug.{ DebugEvent, Debugger }
-import io.gatling.core.session.Session
-
-import akka.actor.ActorRef
-
-class Switch(nextAction: () => ActorRef, val next: ActorRef) extends Interruptable {
-
-	def execute(session: Session) {
-		Debugger.debugger ! DebugEvent(session.userId, "Switch")
-		nextAction() ! session
-	}
-}
-
+sealed trait DebugMessage
+case class DebugEvent(userId: Int, message: String) extends DebugMessage
+case class DebugEnd(userId: Int) extends DebugMessage
+case object DebugFlush extends DebugMessage

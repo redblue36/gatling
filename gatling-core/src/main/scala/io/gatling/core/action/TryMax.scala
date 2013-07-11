@@ -18,6 +18,7 @@ package io.gatling.core.action
 import scala.annotation.tailrec
 
 import akka.actor.{ Actor, ActorRef, Props }
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.result.message.{ GroupMessage, GroupStackEntry, KO, OK }
 import io.gatling.core.result.writer.DataWriter
 import io.gatling.core.session.Session
@@ -84,9 +85,12 @@ class InnerTryMax(times: Int, loopNext: ActorRef, counterName: String, val next:
 		val counterValue = incrementedSession.loopCounterValue(counterName)
 		val status = incrementedSession.statusStack.head
 
-		if ((status == OK && counterValue > 0) || (status == KO && counterValue >= times))
+		if ((status == OK && counterValue > 0) || (status == KO && counterValue >= times)) {
+			Debugger.debugger ! DebugEvent(session.userId, "Exit trymax")
 			next ! incrementedSession.exitTryMax.exitLoop // succeed or exit on exceed
-		else
+		} else {
+			Debugger.debugger ! DebugEvent(session.userId, "Loop trymax")
 			loopNext ! incrementedSession.resetStatus // loop
+		}
 	}
 }

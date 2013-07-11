@@ -16,6 +16,7 @@
 package io.gatling.core.action
 
 import akka.actor.ActorRef
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.session.{ Expression, Session }
 
 /**
@@ -36,6 +37,7 @@ class If(condition: Expression[Boolean], thenNext: ActorRef, elseNext: ActorRef,
 	 */
 	def executeOrFail(session: Session) = condition(session).map { condition =>
 		val n = if (condition) thenNext else elseNext
+		Debugger.debugger ! DebugEvent(session.userId, "If")
 		n ! session
 	}
 }

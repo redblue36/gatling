@@ -18,6 +18,7 @@ package io.gatling.core.action
 import scala.concurrent.duration.DurationLong
 
 import akka.actor.ActorRef
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.session.{ Expression, Session }
 import io.gatling.core.util.TimeHelper.nowMillis
 
@@ -47,8 +48,10 @@ class Pause(pauseDuration: Expression[Long], val next: ActorRef) extends Interru
 				logger.info(s"Pausing for ${durationInMillis}ms (real=${durationMinusDrift}ms)")
 
 				val pauseStart = nowMillis
+				Debugger.debugger ! DebugEvent(session.userId, "Enter pause")
 				system.scheduler.scheduleOnce(durationMinusDrift milliseconds) {
 					val newDrift = nowMillis - pauseStart - durationMinusDrift
+					Debugger.debugger ! DebugEvent(session.userId, "Exit pause")
 					next ! session.setDrift(newDrift)
 				}
 
@@ -56,6 +59,7 @@ class Pause(pauseDuration: Expression[Long], val next: ActorRef) extends Interru
 				// drift is too big
 				val remainingDrift = drift - durationInMillis
 				logger.info(s"can't pause (remaining drift=${remainingDrift}ms)")
+				Debugger.debugger ! DebugEvent(session.userId, "Bypass pause")
 				next ! session.setDrift(remainingDrift)
 			}
 		}

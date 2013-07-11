@@ -16,6 +16,7 @@
 package io.gatling.core.action
 
 import akka.actor.{ Actor, ActorRef, Props }
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.session.{ Expression, Session }
 import io.gatling.core.validation.{ Failure, Success }
 
@@ -54,6 +55,7 @@ class InnerWhile(continueCondition: Expression[Boolean], loopNext: ActorRef, cou
 		{
 			case session if !continue(session) =>
 				val nextSession = (if (exitASAP) session.exitInterruptable else session).exitLoop
+				Debugger.debugger ! DebugEvent(session.userId, s"Exit while loop")
 				next ! nextSession
 		}
 	}
@@ -69,6 +71,9 @@ class InnerWhile(continueCondition: Expression[Boolean], loopNext: ActorRef, cou
 		val initializedSession = if (!session.contains(counterName) && exitASAP) session.enterInterruptable(interrupt) else session
 		val incrementedSession = initializedSession.incrementLoop(counterName)
 
-		interrupt.applyOrElse(incrementedSession, (s: Session) => loopNext ! s)
+		interrupt.applyOrElse(incrementedSession, (s: Session) => {
+			Debugger.debugger ! DebugEvent(session.userId, s"while loop")
+			loopNext ! s
+		})
 	}
 }

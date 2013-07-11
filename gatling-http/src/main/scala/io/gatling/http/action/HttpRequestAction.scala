@@ -32,7 +32,8 @@ package io.gatling.http.action
 import com.ning.http.client.Request
 
 import akka.actor.ActorRef
-import io.gatling.core.action.{ Interruptable, Failable }
+import io.gatling.core.action.{ Failable, Interruptable }
+import io.gatling.core.debug.{ DebugEvent, Debugger }
 import io.gatling.core.session.{ Expression, Session }
 import io.gatling.http.ahc.{ HttpClient, HttpTask, RequestFactory }
 import io.gatling.http.cache.CacheHandling
@@ -67,11 +68,12 @@ class HttpRequestAction(
 
 			if (CacheHandling.isCached(protocol, newSession, request)) {
 				logger.info(s"Skipping cached request '$resolvedRequestName': scenario '${newSession.scenarioName}', userId #${newSession.userId}")
+				Debugger.debugger ! DebugEvent(session.userId, s"$resolvedRequestName HttpRequestAction.bypass/cache")
 				next ! newSession
 
 			} else {
 				logger.info(s"Sending request '$resolvedRequestName': scenario '${newSession.scenarioName}', userId #${newSession.userId}")
-
+				Debugger.debugger ! DebugEvent(session.userId, s"$resolvedRequestName HttpRequestAction.sendRequest to ${request.getUrl}")
 				HttpClient.sendHttpRequest(HttpTask(session, request, resolvedRequestName, checks, responseBuilderFactory, protocol, next))
 			}
 		}
