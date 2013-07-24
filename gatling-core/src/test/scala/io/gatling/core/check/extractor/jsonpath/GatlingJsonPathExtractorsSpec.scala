@@ -120,5 +120,13 @@ class GatlingJsonPathExtractorsSpec extends ValidationSpecification {
 		"support wildcard at second level" in {
 			GatlingJsonPathExtractors.extractMultiple(prepared("/test.json"), "$..store..category") must succeedWith(Some(List("reference", "fiction", "fiction", "fiction")))
 		}
+
+		"support array slicing" in {
+			GatlingJsonPathExtractors.extractMultiple(prepared("/test.json"), "$.store.book[1:3].title") must succeedWith(Some(List("Sword of Honour", "Moby Dick")))
+		}
+
+		"support a step parameter in array slicing" in {
+			GatlingJsonPathExtractors.extractMultiple(prepared("/test.json"), "$.store.book[::-2].title") must succeedWith(Some(List("The Lord of the Rings", "Sword of Honour")))
+		}
 	}
 }
