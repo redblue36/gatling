@@ -63,8 +63,13 @@ class GatlingJsonPathExtractorsSpec extends ValidationSpecification {
 			GatlingJsonPathExtractors.extractOne(1)(prepared("/test.json"), "$.store.book[2].author") must succeedWith(None)
 		}
 
+		// Built-in function are not yet accepted. 
+		//		"return expected result with last function expression" in {
+		//			GatlingJsonPathExtractors.extractOne(0)(prepared("/test.json"), "$.store.book[(@.length - 1)].title") must succeedWith(Some("The Lord of the Rings"))
+		//		}
+
 		"return expected result with last function expression" in {
-			GatlingJsonPathExtractors.extractOne(0)(prepared("/test.json"), "$.store.book[(@.length - 1)].title") must succeedWith(Some("The Lord of the Rings"))
+			GatlingJsonPathExtractors.extractOne(0)(prepared("/test.json"), "$.store.book[-1].title") must succeedWith(Some("The Lord of the Rings"))
 		}
 
 		"not mess up if two nodes with the same name are placed in different locations" in {
@@ -72,7 +77,7 @@ class GatlingJsonPathExtractorsSpec extends ValidationSpecification {
 		}
 
 		"support bracket notation" in {
-			GatlingJsonPathExtractors.extractOne(0)(prepared("/test.json"), "$.@id") must succeedWith(Some("ID"))
+			GatlingJsonPathExtractors.extractOne(0)(prepared("/test.json"), "$['@id']") must succeedWith(Some("ID"))
 		}
 
 		"support element filter with object root" in {
@@ -80,16 +85,18 @@ class GatlingJsonPathExtractorsSpec extends ValidationSpecification {
 		}
 
 		"support element filter with array root" in {
-			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$.[?(@.id=='19434')].foo") must succeedWith(Some("1"))
+			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$[?(@.id==19434)].foo") must succeedWith(Some("1"))
 		}
 
-		"support element filter with wildcard" in {
-			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$..[?(@.id==19434)].foo") must succeedWith(Some("1"))
-		}
+		// $..[?()] is not a valid syntax
+		//		"support element filter with wildcard" in {
+		//			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$..[?(@.id==19434)].foo") must succeedWith(Some("1"))
+		//		}
 
-		"support multiple element filters" in {
-			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$..[?(@.id==19434)][?(@.foo==1)].foo") must succeedWith(Some("1"))
-		}
+		// This is incorrect. A way of writing that would be "$[?(@.id==19434 && @.foo==1)]" but this is not yet supported
+		//		"support multiple element filters" in {
+		//			GatlingJsonPathExtractors.extractOne(0)(prepared("/test2.json"), "$[?(@.id==19434)][?(@.foo==1)]") must succeedWith(Some("1"))
+		//		}
 	}
 
 	"extractMultiple" should {
